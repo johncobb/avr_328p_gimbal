@@ -22,11 +22,15 @@
 #include "eeprom/eeprom.h"
 #include "gimbal/gimbal.h"
 #include "pwm/pwm.h"
+#include "cli/cli.h"
 
 // log debugging
 static const char _tag[] PROGMEM = "main: ";
 volatile char term_in = 0;
 float center_val = 0.0f;
+
+
+
 
 
 // pid variables
@@ -51,7 +55,8 @@ void balance();
 
 void terminal_in_cb(uint8_t c)
 {
-	term_in = c;
+	//term_in = c;
+	cli_put_char(c);
 
 }
 
@@ -59,6 +64,12 @@ int main()
 {
 	// terminal callback for command line input
 	debug_init(terminal_in_cb);
+
+	/*
+	 * initialize command line interpreter
+	 */
+	cli_init();
+
 	// initialize clock
 	clock_init();
 	// enable interrupts
@@ -67,7 +78,7 @@ int main()
 	// seed the pid loop
 	last_pid_read = clock_time();
 
-	LOG("\r\n\r\nspike_328p_segway starting...\r\n");
+	LOG("\r\n\r\navr_328p_gimbal starting...\r\n");
 
 	/*
 	 * load configuration
@@ -76,7 +87,9 @@ int main()
 	config_init();
 
 
-	/* --- i2c/gyro/imu initialization ---*/
+	/*
+	 * i2c/gyro/imu initialization
+	 */
 	// First we need to join the I2C bus
 	LOG("joining i2c bus...\r\n");
 	i2c_begin();
@@ -105,15 +118,10 @@ int main()
 
 	while(1)
 	{
-		if(term_in == (char)'+') {
-			term_in = 0;
-		}
-		else if (term_in == (char)'-') {
-			term_in = 0;
-		}
+		cli_tick();
 
-		gimbal_tick();
-		balance();
+//		gimbal_tick();
+//		balance();
 	}
 
 	return 0;
@@ -143,5 +151,9 @@ void balance()
 	pwm_setval(pwm_out_x, 4);
 	pwm_setval(pwm_out_y, 5);
 }
+
+
+
+
 
 

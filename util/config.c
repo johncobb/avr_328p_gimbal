@@ -5,16 +5,37 @@
  *      Author: jcobb
  */
 
-
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <avr/pgmspace.h>
 #include "config.h"
+#include "../util/log.h"
 #include "../eeprom/eeprom.h"
 #include "../math/fast_math.h"
+
+static const char _tag[] PROGMEM = "cli: ";
 
 config_t config;
 float resolution_divider;
 
+const t_config_def PROGMEM config_list_pgm[] = {
+		{"foo", INT8, &config.foo, &init_foo},
+		{"bar", INT8, &config.bar, &init_bar},
+		{"foobar", FLOAT, &config.foobar, &init_foobar},
+		{"", BOOL, NULL, NULL}
+};
+
+void get_pgm_string(PGM_P s, char *d, int num_bytes);
+t_config_def * get_config_def(char *name);
+
+
 void config_init()
 {
+	config.foo = 0;
+	config.bar = 0;
+	config.foobar = 0.000f;
 	config.gyro_pitch_kp = 20000;
 	config.gyro_pitch_ki = 10000;
 	config.gyro_pitch_kd = 40000;
@@ -61,8 +82,103 @@ void load_config()
 	}
 }
 
-void write_config()
+
+void get_pgm_string(PGM_P s, char *d, int num_bytes)
 {
-	config.crc8 = crc_slow((crc *)&config, sizeof(config)-1); // set proper CRC
-	//eeprom_write(0, config);
+	for(int i=0; i<num_bytes; i++) {
+		*d++ = pgm_read_byte(s++);
+	}
+}
+
+void config_test()
+{
+	t_config_def * def = get_config_def("abc");
+
+	if(def != NULL)
+		write_config(def, 123);
+
+}
+
+//void config_set(char *entry, int32_t parm)
+void config_set(char * entry, char * parm)
+{
+	t_config_def * def = get_config_def(entry);
+
+	if(def != NULL)
+		if(def->type == FLOAT)
+			write_config_f(def, atof(parm));
+		else
+			write_config(def, atoi(parm));
+	else
+		LOG("entry not found\r\n");
+}
+
+t_config_def * get_config_def(char *name)
+{
+	void *addr = NULL;
+	bool found = false;
+
+	t_config_def * p = (t_config_def *) config_list_pgm;
+
+	while(true) {
+		get_pgm_string((PGM_P)p, config_union.bytes, sizeof(config_def));
+		if(config_union.c.parm_address == NULL) break;
+		if(strncmp(config_union.c.name, name, CONFIG_NAME_MAXLEN) == 0) {
+			addr = config_union.c.parm_address;
+			found = true;
+			break;
+		}
+		p++;
+	}
+
+	if(found)
+		return &config_union.c;
+	else
+		return NULL;
+}
+
+void write_config(t_config_def * def, int32_t val)
+{
+	if(def == NULL) {
+		LOG("illegal parameter\r\n");
+		return;
+	}
+
+	switch(def->type) {
+		case BOOL	: *(bool *) (def->parm_address) 	= val; break;
+		case UINT8	: *(uint8_t *) (def->parm_address) 	= val; break;
+		case UINT16	: *(uint16_t *) (def->parm_address) = val; break;
+		case UINT32	: *(uint32_t *) (def->parm_address) = val; break;
+		case INT8	: *(int8_t *) (def->parm_address) 	= val; break;
+		case INT16	: *(int16_t *) (def->parm_address) 	= val; break;
+		case INT32	: *(int32_t *) (def->parm_address) 	= val; break;
+	}
+
+	if(def->update != NULL) def->update();
+
+}
+
+void write_config_f(t_config_def *def, float val)
+{
+	if(def == NULL) {
+		LOG("illegal parameter\r\n");
+		return;
+	}
+
+	 *(float *) (def->parm_address) = val;
+
+	 if(def->update != NULL) def->update();
+}
+
+int8_t init_foo() {
+	LOG("foo=%d\r\n", config.foo);
+}
+
+int8_t init_bar() {
+	LOG("bar=%d\r\n", config.bar);
+}
+
+int8_t init_foobar(){
+	LOG("foobar=%f\r\n", config.foobar);
+
 }

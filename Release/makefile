@@ -17,6 +17,7 @@ RM := rm -rf
 -include gimbal/subdir.mk
 -include eeprom/subdir.mk
 -include complimentary/subdir.mk
+-include cli/subdir.mk
 -include subdir.mk
 -include objects.mk
 

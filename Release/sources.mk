@@ -31,4 +31,5 @@ i2c \
 gimbal \
 eeprom \
 complimentary \
+cli \
 

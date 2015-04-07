@@ -47,6 +47,7 @@ pid_data_t pitch_pid_par;
 pid_data_t roll_pid_par;
 
 clock_time_t _last_time_read = 0;
+clock_time_t _last_time_log = 0;
 
 float _last_angle_x = 0.0f;
 float _last_angle_y = 0.0f;
@@ -176,8 +177,12 @@ void read_sensor_data(int16_t* gX, int16_t* gY, int16_t* gZ, int16_t* mX, int16_
 
 #define RESTRICT_PITCH
 
+
+
 void gimbal_kalman_angle()
 {
+
+
 	int16_t gX=0, gY=0, gZ=0, mX=0, mY=0, mZ=0;
 
 	read_sensor_data(&gX, &gY, &gZ, &mX, &mY, &mZ);
@@ -187,7 +192,11 @@ void gimbal_kalman_angle()
 
 	clock_time_t delta_t = (t_now-_last_time_read);
 
-	LOG("ax, ay, az, gx, gy, gz: %d %d %d %d %d %d\r\n", aX, aY, aZ, gX, gY, gZ);
+//	if((t_now-_last_time_log) > 1000) {
+//		_last_time_log = clock_time();
+//		LOG("ax, ay, az, gx, gy, gz: %d %d %d %d %d %d\r\n", aX, aY, aZ, gX, gY, gZ);
+//	}
+
 
 	float dt = ((float)delta_t)/1000.0f;
 
@@ -248,7 +257,13 @@ void gimbal_kalman_angle()
 
 	gimbal_angle.X = kal_angle_x;
 	gimbal_angle.Y = kal_angle_y;
-	LOG("roll/pitch/yaw %f:%f:%f\r\n", kal_angle_x, kal_angle_y, 0.0f);
+
+	if((t_now-_last_time_log) > 50) {
+		_last_time_log = clock_time();
+		LOG("roll/pitch/yaw %f:%f:%f\r\n", kal_angle_x, kal_angle_y, 0.0f);
+	}
+
+
 
 }
 

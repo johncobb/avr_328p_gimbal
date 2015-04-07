@@ -8,13 +8,33 @@
 #ifndef CONFIG_H_
 #define CONFIG_H_
 
-#include <stdint.h>
+#include <string.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <avr/pgmspace.h>
+
+
+// types of config parameters
+enum conf_type {
+  BOOL,
+  INT8,
+  INT16,
+  INT32,
+  UINT8,
+  UINT16,
+  UINT32,
+  FLOAT
+};
 
 typedef uint8_t crc;
 
 typedef struct
 {
+	int32_t		foo;
+	int32_t		bar;
+	float		foobar;
+	int32_t		abc;
+	int32_t		abc123;
 	int32_t 	gyro_pitch_kp;
 	int32_t		gyro_pitch_ki;
 	int32_t		gyro_pitch_kd;
@@ -51,14 +71,46 @@ typedef struct
 	uint8_t 	crc8;
 } config_t;
 
-extern config_t config;
 
+extern config_t config;
 
 extern float resolution_divider;
 
 
+#define CONFIG_NAME_MAXLEN 20
+typedef struct cfg_def {
+	char name[CONFIG_NAME_MAXLEN];
+	int32_t type;
+	void * parm_address;
+	void (* update)(void);
+} t_config_def;
+
+t_config_def config_def;
+
+typedef union {
+	t_config_def c;
+	char		 bytes[sizeof(t_config_def)];
+} t_config_union;
+
+t_config_union config_union;
+
+int8_t init_foo();
+int8_t init_bar();
+int8_t init_foobar();
+
+
+
+
+
+
+
 void config_init();
 void load_config();
-void write_config();
+
+void config_test();
+void config_set(char *entry, char *parm);
+void write_config(t_config_def * def, int32_t val);
+void write_config_f(t_config_def *def, float val);
+//void write_config();
 
 #endif /* CONFIG_H_ */
